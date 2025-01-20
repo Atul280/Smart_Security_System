@@ -1,0 +1,89 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include <ESP32Servo.h>
+
+// Define pin connections
+const int ldrPin = 36;
+const int relayPin = 26;
+const int ledPin = 25;
+const int buzzerPin = 27;
+const int servoPin = 23;
+
+// Initialize LCD
+LiquidCrystal_I2C lcd(0x27, 16, 2); // Adjust the I2C address according to your setup
+
+// Initialize Servo
+Servo myServo;
+
+// Threshold for LDR
+int ldrThreshold = 500;
+
+void setup() {
+  // Initialize serial communication
+  Serial.begin(115200);
+  
+  // Initialize LCD
+  lcd.begin();
+  lcd.backlight();
+  
+  // Initialize Servo
+  myServo.attach(servoPin);
+  myServo.write(0); // Ensure the door is initially closed
+  
+  // Initialize pins
+  pinMode(ldrPin, INPUT);
+  pinMode(relayPin, OUTPUT);
+  pinMode(ledPin, OUTPUT);
+  pinMode(buzzerPin, OUTPUT);
+
+  // Start with everything off
+  digitalWrite(relayPin, LOW);
+  digitalWrite(ledPin, LOW);
+  digitalWrite(buzzerPin, LOW);
+  
+  // Display initial message
+  lcd.setCursor(0, 0);
+  lcd.print("Security System");
+  lcd.setCursor(0, 1);
+  lcd.print("Initializing...");
+  delay(2000);
+  lcd.clear();
+}
+
+void loop() {
+  int ldrValue = analogRead(ldrPin);
+  Serial.print("LDR Value: ");
+  Serial.println(ldrValue);
+  
+  if (ldrValue > ldrThreshold) {
+    // Unauthorized access detected
+    digitalWrite(relayPin, HIGH); // Lock the door
+    digitalWrite(ledPin, HIGH);   // Turn on LED
+    digitalWrite(buzzerPin, HIGH); // Sound the buzzer
+    
+    myServo.write(90); // Move servo to open position
+
+    // Display alert message on LCD
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("ALERT: Unauthorized");
+    lcd.setCursor(0, 1);
+    lcd.print("Access Detected!");
+  } else {
+    // No unauthorized access
+    digitalWrite(relayPin, LOW); // Unlock the door
+    digitalWrite(ledPin, LOW);   // Turn off LED
+    digitalWrite(buzzerPin, LOW); // Stop the buzzer
+    
+    myServo.write(0); // Move servo to closed position
+
+    // Display system status on LCD
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("System Status:");
+    lcd.setCursor(0, 1);
+    lcd.print("All Secure");
+  }
+
+  delay(1000); // Delay for stability
+}
